@@ -60,9 +60,23 @@ class Cvc5CApiAbortStream
 #define CVC5_CAPI_TRY_CATCH_BEGIN \
   try                             \
   {
-#define CVC5_CAPI_TRY_CATCH_END \
-  }                             \
-  catch (cvc5::CVC5ApiException & e) { CVC5_CAPI_ABORT << e.getMessage(); }
+#define CVC5_CAPI_TRY_CATCH_END                                       \
+  }                                                                   \
+  catch (cvc5::CVC5ApiException & e) { CVC5_CAPI_ABORT << e.getMessage(); } \
+  catch (const std::exception& e)                                     \
+  {                                                                   \
+    /* Any other std::exception that escaped the C++ API layer (e.g.  \
+       std::bad_alloc, std::runtime_error from third-party code). The \
+       extern "C" boundary cannot let it through. */                  \
+    CVC5_CAPI_ABORT << e.what();                                      \
+  }                                                                   \
+  catch (...)                                                         \
+  {                                                                   \
+    /* Non-std::exception payloads (foreign-library types such as     \
+       CoCoA::ErrorInfo, or raw `throw int`). Must not unwind past    \
+       extern "C". */                                                 \
+    CVC5_CAPI_ABORT << "unknown C++ exception";                       \
+  }
 
 #endif
 
