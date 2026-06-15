@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: unsat
 ; Tests the ff rewriter
 (set-info :smt-lib-version 2.6)

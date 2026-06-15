@@ -1,6 +1,5 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: unsat
-; COMMAND-LINE: --ff-solver split
 ; COMMAND-LINE: --ff-solver gb
 ; x, m, is_zero: field
 ; The constraints mx - 1 + is_zero = 0

@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: sat
 ; EXPECT: unsat
 ; EXPECT: sat

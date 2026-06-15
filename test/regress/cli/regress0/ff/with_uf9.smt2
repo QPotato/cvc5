@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: unsat
 ; COMMAND-LINE: --simplification=none
 (set-logic QF_FF)

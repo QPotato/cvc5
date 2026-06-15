@@ -14,7 +14,7 @@
  * [OKTB23]: https://doi.org/10.1007/978-3-031-37703-7_8
  */
 
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
 
 #include "theory/ff/sub_theory.h"
 
@@ -23,15 +23,11 @@
 #include "expr/node_traversal.h"
 #include "options/ff_options.h"
 #include "smt/env_obj.h"
-#include "theory/ff/cocoa_encoder.h"
-#include "theory/ff/core.h"
 #include "theory/ff/gb.h"
-#include "theory/ff/multi_roots.h"
-#include "theory/ff/split_gb.h"
 #include "theory/ff/util.h"
-#include "util/cocoa_globals.h"
 #include "util/finite_field_value.h"
 #include "util/resource_manager.h"
+#include "util/singular_globals.h"
 
 namespace cvc5::internal {
 namespace theory {
@@ -44,8 +40,8 @@ SubTheory::SubTheory(Env& env, FfStatistics* stats, const Integer& modulus)
       d_stats(stats)
 {
   AlwaysAssert(modulus.isProbablePrime()) << "non-prime fields are unsupported";
-  // must be initialized before using CoCoA.
-  initCocoaGlobalManager();
+  // must be initialized before using Singular.
+  initSingular();
 }
 
 void SubTheory::notifyFact(TNode fact) { d_facts.emplace_back(fact); }
@@ -63,19 +59,7 @@ Result SubTheory::postCheck(Theory::Effort e)
   {
     std::vector<Node> facts{};
     std::copy(d_facts.begin(), d_facts.end(), std::back_inserter(facts));
-    FfResult result;
-    if (options().ff.ffSolver == options::FfSolver::SPLIT_GB)
-    {
-      result = split(facts, size(), d_env, d_stats);
-    }
-    else if (options().ff.ffSolver == options::FfSolver::GB)
-    {
-      result = gb(facts, size(), d_env, d_stats);
-    }
-    else
-    {
-      Unreachable() << options().ff.ffSolver << std::endl;
-    }
+    FfResult result = gb(facts, size(), d_env, d_stats);
 
     if (std::holds_alternative<FfModel>(result))
     {
@@ -119,4 +103,4 @@ const std::unordered_map<Node, Node>& SubTheory::model() const
 }  // namespace theory
 }  // namespace cvc5::internal
 
-#endif /* CVC5_USE_COCOA */
+#endif /* CVC5_USE_SINGULAR */

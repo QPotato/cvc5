@@ -10,21 +10,18 @@
  * Black box testing of ff univariate root finding.
  */
 
-#ifdef CVC5_USE_COCOA
-#include <CoCoA/BigInt.H>
-#include <CoCoA/QuotientRing.H>
-#include <CoCoA/RingZZ.H>
-#include <CoCoA/SparsePolyOps-ideal.H>
-#include <CoCoA/SparsePolyRing.H>
-#include <CoCoA/ring.H>
-#include <CoCoA/symbol.H>
+#include "cvc5_private.h"
+
+#ifdef CVC5_USE_SINGULAR
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "test_smt.h"
-#include "theory/ff/uni_roots.h"
-#include "util/cocoa_globals.h"
+#include "theory/ff/singular_util.h"
+#include "util/integer.h"
+#include "util/singular_globals.h"
 
 namespace cvc5::internal {
 
@@ -38,7 +35,7 @@ class TestTheoryFfRootsBlack : public TestSmt
   void SetUp() override
   {
     TestSmt::SetUp();
-    initCocoaGlobalManager();
+    initSingular();
   }
 };
 
@@ -50,64 +47,61 @@ class TestTheoryFfRootsBlack : public TestSmt
 TEST_F(TestTheoryFfRootsBlack, DistinctRootsPoly)
 {
   {
-    CoCoA::BigInt p = CoCoA::BigIntFromString(TINY_MODULUS);
-    CoCoA::ring ring = CoCoA::NewZZmod(p);
-    std::vector<CoCoA::symbol> syms = CoCoA::symbols("x,y,z");
-    CoCoA::PolyRing polyRing = CoCoA::NewPolyRing(ring, syms);
-    CoCoA::RingElem x = CoCoA::indet(polyRing, 0);
+    ff::SingularRing ring(Integer(TINY_MODULUS), {"x", "y", "z"});
+    ff::Poly x = ff::Poly::indet(ring, 0);
+    ff::Poly one = ff::Poly::one(ring);
     {
-      CoCoA::RingElem f = x;
-      CoCoA::RingElem ex = x;
+      ff::Poly f = x;
+      ff::Poly ex = x;
       EXPECT_EQ(ff::distinctRootsPoly(f), ex);
     }
 
     {
-      CoCoA::RingElem f = x * x * x;
-      CoCoA::RingElem ex = x;
+      ff::Poly f = x * x * x;
+      ff::Poly ex = x;
       EXPECT_EQ(ff::distinctRootsPoly(f), ex);
     }
 
     {
-      CoCoA::RingElem f = x * x * x * (x - 1);
-      CoCoA::RingElem ex = x * (x - 1);
+      ff::Poly f = x * x * x * (x - one);
+      ff::Poly ex = x * (x - one);
       EXPECT_EQ(ff::distinctRootsPoly(f), ex);
     }
 
     {
-      CoCoA::RingElem f = x * x * x * (x - 1) * (x * x + 1);
-      CoCoA::RingElem ex = x * (x - 1);
+      ff::Poly f = x * x * x * (x - one) * (x * x + one);
+      ff::Poly ex = x * (x - one);
       EXPECT_EQ(ff::distinctRootsPoly(f), ex);
     }
   }
 
   {
     // 2^255-19 (prime)
-    CoCoA::BigInt p = CoCoA::BigIntFromString(BIG_MODULUS);
-    CoCoA::ring ring = CoCoA::NewZZmod(p);
-    std::vector<CoCoA::symbol> syms = CoCoA::symbols("x,y,z");
-    CoCoA::PolyRing polyRing = CoCoA::NewPolyRing(ring, syms);
-    CoCoA::RingElem x = CoCoA::indet(polyRing, 0);
+    ff::SingularRing ring(Integer(BIG_MODULUS), {"x", "y", "z"});
+    ff::Poly x = ff::Poly::indet(ring, 0);
+    ff::Poly one = ff::Poly::one(ring);
+    ff::Poly two = ff::Poly::constant(ring, Integer(2));
     {
-      CoCoA::RingElem f = x;
-      CoCoA::RingElem ex = x;
+      ff::Poly f = x;
+      ff::Poly ex = x;
       EXPECT_EQ(ff::distinctRootsPoly(f), ex);
     }
 
     {
-      CoCoA::RingElem f = x * x * x;
-      CoCoA::RingElem ex = x;
+      ff::Poly f = x * x * x;
+      ff::Poly ex = x;
       EXPECT_EQ(ff::distinctRootsPoly(f), ex);
     }
 
     {
-      CoCoA::RingElem f = x * x * x * (x - 1);
-      CoCoA::RingElem ex = x * (x - 1);
+      ff::Poly f = x * x * x * (x - one);
+      ff::Poly ex = x * (x - one);
       EXPECT_EQ(ff::distinctRootsPoly(f), ex);
     }
 
     {
-      CoCoA::RingElem f = x * x * x * (x - 1) * (x * x + 2);
-      CoCoA::RingElem ex = x * (x - 1);
+      ff::Poly f = x * x * x * (x - one) * (x * x + two);
+      ff::Poly ex = x * (x - one);
       EXPECT_EQ(ff::distinctRootsPoly(f), ex);
     }
   }
@@ -116,53 +110,48 @@ TEST_F(TestTheoryFfRootsBlack, DistinctRootsPoly)
 TEST_F(TestTheoryFfRootsBlack, RootsZero)
 {
   {
-    CoCoA::BigInt p = CoCoA::BigIntFromString(TINY_MODULUS);
-    CoCoA::ring ring = CoCoA::NewZZmod(p);
-    std::vector<CoCoA::symbol> syms = CoCoA::symbols("x,y,z");
-    CoCoA::PolyRing polyRing = CoCoA::NewPolyRing(ring, syms);
-    CoCoA::RingElem x = CoCoA::indet(polyRing, 0);
-    CoCoA::RingElem z = ring->myZero();
+    ff::SingularRing ring(Integer(TINY_MODULUS), {"x", "y", "z"});
+    ff::Poly x = ff::Poly::indet(ring, 0);
+    ff::Poly one = ff::Poly::one(ring);
+    ff::Poly z = ff::Poly::zero(ring);
     {
-      CoCoA::RingElem f = x;
-      std::vector<CoCoA::RingElem> roots = {z + 0};
+      ff::Poly f = x;
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * x * x;
-      std::vector<CoCoA::RingElem> roots = {z + 0};
+      ff::Poly f = x * x * x;
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * (x * x + 1);
-      std::vector<CoCoA::RingElem> roots = {z + 0};
+      ff::Poly f = x * (x * x + one);
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0))};
       EXPECT_EQ(ff::roots(f), roots);
     }
   }
 
   {
-    CoCoA::BigInt p = CoCoA::BigIntFromString(BIG_MODULUS);
-    CoCoA::ring ring = CoCoA::NewZZmod(p);
-    std::vector<CoCoA::symbol> syms = CoCoA::symbols("x,y,z");
-    CoCoA::PolyRing polyRing = CoCoA::NewPolyRing(ring, syms);
-    CoCoA::RingElem x = CoCoA::indet(polyRing, 0);
-    CoCoA::RingElem z = ring->myZero();
+    ff::SingularRing ring(Integer(BIG_MODULUS), {"x", "y", "z"});
+    ff::Poly x = ff::Poly::indet(ring, 0);
+    ff::Poly two = ff::Poly::constant(ring, Integer(2));
     {
-      CoCoA::RingElem f = x;
-      std::vector<CoCoA::RingElem> roots = {z + 0};
+      ff::Poly f = x;
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * x * x;
-      std::vector<CoCoA::RingElem> roots = {z + 0};
+      ff::Poly f = x * x * x;
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * (x * x + 2);
-      std::vector<CoCoA::RingElem> roots = {z + 0};
+      ff::Poly f = x * (x * x + two);
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0))};
       EXPECT_EQ(ff::roots(f), roots);
     }
   }
@@ -171,85 +160,96 @@ TEST_F(TestTheoryFfRootsBlack, RootsZero)
 TEST_F(TestTheoryFfRootsBlack, RootsFull)
 {
   {
-    CoCoA::BigInt p = CoCoA::BigIntFromString(TINY_MODULUS);
-    CoCoA::ring ring = CoCoA::NewZZmod(p);
-    std::vector<CoCoA::symbol> syms = CoCoA::symbols("x,y,z");
-    CoCoA::PolyRing polyRing = CoCoA::NewPolyRing(ring, syms);
-    CoCoA::RingElem x = CoCoA::indet(polyRing, 0);
-    CoCoA::RingElem z = ring->myZero();
+    ff::SingularRing ring(Integer(TINY_MODULUS), {"x", "y", "z"});
+    ff::Poly x = ff::Poly::indet(ring, 0);
+    ff::Poly one = ff::Poly::one(ring);
 
     {
-      CoCoA::RingElem f = x * (x - 1);
-      std::vector<CoCoA::RingElem> roots = {z + 0, z + 1};
+      ff::Poly f = x * (x - one);
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0)),
+                                     ff::Poly::constant(ring, Integer(1))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * (x - 1) * x * (x - 1);
-      std::vector<CoCoA::RingElem> roots = {z + 0, z + 1};
+      ff::Poly f = x * (x - one) * x * (x - one);
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0)),
+                                     ff::Poly::constant(ring, Integer(1))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * (x - 1) * x * (x - 1) * (x * x + 1) * (x * x + 1);
-      std::vector<CoCoA::RingElem> roots = {z + 0, z + 1};
+      ff::Poly f =
+          x * (x - one) * x * (x - one) * (x * x + one) * (x * x + one);
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0)),
+                                     ff::Poly::constant(ring, Integer(1))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = (x * x + 1) * (x * x + 1);
-      std::vector<CoCoA::RingElem> roots = {};
+      ff::Poly f = (x * x + one) * (x * x + one);
+      std::vector<ff::Poly> roots = {};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * x - x + 1;
-      std::vector<CoCoA::RingElem> roots = {z - 2, z + 3};
+      ff::Poly f = x * x - x + one;
+      // roots over GF(7) are 5 and 3; sorted by Singular's (symmetric) string
+      // representation that is ["-2"(=5), "3"], i.e. {5, 3}.
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(5)),
+                                     ff::Poly::constant(ring, Integer(3))};
       EXPECT_EQ(ff::roots(f), roots);
     }
   }
 
   {
-    CoCoA::BigInt p = CoCoA::BigIntFromString(BIG_MODULUS);
-    CoCoA::ring ring = CoCoA::NewZZmod(p);
-    std::vector<CoCoA::symbol> syms = CoCoA::symbols("x,y,z");
-    CoCoA::PolyRing polyRing = CoCoA::NewPolyRing(ring, syms);
-    CoCoA::RingElem x = CoCoA::indet(polyRing, 0);
-    CoCoA::RingElem z = ring->myZero();
+    ff::SingularRing ring(Integer(BIG_MODULUS), {"x", "y", "z"});
+    ff::Poly x = ff::Poly::indet(ring, 0);
+    ff::Poly one = ff::Poly::one(ring);
+    ff::Poly two = ff::Poly::constant(ring, Integer(2));
 
     {
-      CoCoA::RingElem f = x * (x - 1);
-      std::vector<CoCoA::RingElem> roots = {z + 0, z + 1};
+      ff::Poly f = x * (x - one);
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0)),
+                                     ff::Poly::constant(ring, Integer(1))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * (x - 1) * x * (x - 1);
-      std::vector<CoCoA::RingElem> roots = {z + 0, z + 1};
+      ff::Poly f = x * (x - one) * x * (x - one);
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0)),
+                                     ff::Poly::constant(ring, Integer(1))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * (x - 1) * x * (x - 1) * (x * x + 2) * (x * x + 2);
-      std::vector<CoCoA::RingElem> roots = {z + 0, z + 1};
+      ff::Poly f =
+          x * (x - one) * x * (x - one) * (x * x + two) * (x * x + two);
+      std::vector<ff::Poly> roots = {ff::Poly::constant(ring, Integer(0)),
+                                     ff::Poly::constant(ring, Integer(1))};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = (x * x + 2) * (x * x + 2);
-      std::vector<CoCoA::RingElem> roots = {};
+      ff::Poly f = (x * x + two) * (x * x + two);
+      std::vector<ff::Poly> roots = {};
       EXPECT_EQ(ff::roots(f), roots);
     }
 
     {
-      CoCoA::RingElem f = x * x - x + 1;
-      std::vector<CoCoA::RingElem> roots = {
-          CoCoA::RingElem(ring,
-                          "-253802764370791375970922363645711810106321778329314"
-                          "68165172742469126098314552"),
-          CoCoA::RingElem(ring,
-                          "2538027643707913759709223636457118101063217783293146"
-                          "8165172742469126098314553"),
+      ff::Poly f = x * x - x + one;
+      // The two roots of x^2-x+1 mod (2^255-19), as canonical [0,p) integers.
+      // roots() sorts by Singular's symmetric string representation; the larger
+      // canonical value (> p/2) prints with a leading '-', so it sorts first.
+      std::vector<ff::Poly> roots = {
+          ff::Poly::constant(
+              ring,
+              Integer("3251576818157896011469325613977277291600281449988881"
+                      "3854556049534830466505397")),
+          ff::Poly::constant(
+              ring,
+              Integer("2538027643707913759709223636457118101063217783293146"
+                      "8165172742469126098314553")),
       };
       EXPECT_EQ(ff::roots(f), roots);
     }
@@ -258,4 +258,4 @@ TEST_F(TestTheoryFfRootsBlack, RootsFull)
 
 }  // namespace test
 }  // namespace cvc5::internal
-#endif  // CVC5_USE_COCOA
+#endif  // CVC5_USE_SINGULAR

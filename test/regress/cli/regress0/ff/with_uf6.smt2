@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: sat
 (set-info :smt-lib-version 2.6)
 (set-info :category "crafted")

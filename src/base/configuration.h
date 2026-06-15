@@ -109,6 +109,8 @@ class CVC5_EXPORT Configuration
 
   static bool isBuiltWithCoCoA();
 
+  static bool isBuiltWithSingular();
+
   static bool isBuiltWithPortfolio();
 
   /* Return a sorted array of the trace tags name */

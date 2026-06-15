@@ -1,6 +1,5 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: unsat
-; COMMAND-LINE: --ff-solver split
 ; COMMAND-LINE: --ff-solver gb
 ; XOR compilation strategy (sound case)
 (set-info :smt-lib-version 2.6)

@@ -10,7 +10,7 @@
  * Finding common zeros using Groebner bases.
  */
 
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
 
 #include "cvc5_private.h"
 

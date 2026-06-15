@@ -7,26 +7,18 @@
  * directory for licensing information.
  * ****************************************************************************
  *
- * encoding Nodes as cocoa ring elements.
+ * encoding Nodes as singular ring elements.
  */
 
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
 
-#include "theory/ff/cocoa_encoder.h"
-
-// external includes
-#include <CoCoA/BigInt.H>
-#include <CoCoA/QuotientRing.H>
-#include <CoCoA/SparsePolyIter.H>
-#include <CoCoA/SparsePolyOps-RingElem.H>
-#include <CoCoA/SparsePolyRing.H>
+#include "theory/ff/singular_encoder.h"
 
 // std includes
 #include <sstream>
 
 // internal includes
 #include "expr/node_traversal.h"
-#include "theory/ff/cocoa_util.h"
 #include "theory/theory.h"
 
 namespace cvc5::internal {
@@ -35,11 +27,11 @@ namespace ff {
 
 #define LETTER(c) (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z'))
 
-// CoCoA symbols must start with a letter and contain only letters, numbers, and
-// underscores.
+// Singular identifiers must start with a letter and contain only letters,
+// numbers, and underscores.
 //
 // Our encoding is described within
-CoCoA::symbol cocoaSym(const std::string& varName, std::optional<size_t> index)
+std::string singularSym(const std::string& varName, std::optional<size_t> index)
 {
   std::ostringstream o;
   for (const auto c : varName)
@@ -70,34 +62,37 @@ CoCoA::symbol cocoaSym(const std::string& varName, std::optional<size_t> index)
   {
     s.insert(0, "u__");
   }
-  return index.has_value() ? CoCoA::symbol(s, *index) : CoCoA::symbol(s);
+  // fold the optional index into the name as a "_<index>" suffix
+  if (index.has_value())
+  {
+    s += "_" + std::to_string(*index);
+  }
+  return s;
 }
 
-CocoaEncoder::CocoaEncoder(NodeManager* nm, const FfSize& size)
+SingularEncoder::SingularEncoder(NodeManager* nm, const FfSize& size)
     : FieldObj(nm, size)
 {
 }
 
-CoCoA::symbol CocoaEncoder::freshSym(const std::string& varName,
-                                     std::optional<size_t> index)
+std::string SingularEncoder::freshSym(const std::string& varName,
+                                      std::optional<size_t> index)
 {
-  Trace("ff::cocoa::sym") << "CoCoA sym for " << varName;
+  Trace("ff::singular::sym") << "Singular sym for " << varName;
   if (index.has_value())
   {
-    Trace("ff::cocoa::sym") << "[" << *index << "]";
+    Trace("ff::singular::sym") << "[" << *index << "]";
   }
-  Trace("ff::cocoa::sym") << std::endl;
+  Trace("ff::singular::sym") << std::endl;
   Assert(d_stage == Stage::Scan);
   std::optional<size_t> suffix = {};
-  CoCoA::symbol sym("dummy");
   std::string symString;
   do
   {
     std::string n = suffix.has_value()
                         ? varName + "_" + std::to_string(suffix.value())
                         : varName;
-    sym = cocoaSym(n, index);
-    symString = extractStr(sym);
+    symString = singularSym(n, index);
     if (suffix.has_value())
     {
       *suffix += 1;
@@ -108,23 +103,23 @@ CoCoA::symbol CocoaEncoder::freshSym(const std::string& varName,
     }
   } while (d_vars.count(symString));
   d_vars.insert(symString);
-  d_syms.push_back(sym);
-  return sym;
+  d_syms.push_back(symString);
+  return symString;
 }
 
-void CocoaEncoder::endScan()
+void SingularEncoder::endScan()
 {
   Assert(d_stage == Stage::Scan);
   d_stage = Stage::Encode;
-  d_coeffRing = CoCoA::NewZZmod(intToCocoa(size()));
-  d_polyRing = CoCoA::NewPolyRing(*d_coeffRing, d_syms);
+  d_ring = std::make_unique<SingularRing>(
+      static_cast<const Integer&>(size()), d_syms);
   for (size_t i = 0, n = d_syms.size(); i < n; ++i)
   {
-    d_symPolys.insert({extractStr(d_syms[i]), CoCoA::indet(*d_polyRing, i)});
+    d_symPolys.insert({d_syms[i], Poly::indet(*d_ring, i)});
   }
 }
 
-void CocoaEncoder::addFact(const Node& fact)
+void SingularEncoder::addFact(const Node& fact)
 {
   Assert(isFfFact(fact, size()));
   if (d_stage == Stage::Scan)
@@ -140,25 +135,25 @@ void CocoaEncoder::addFact(const Node& fact)
       }
       if (isFfLeaf(node, size()) && !node.isConst())
       {
-        Trace("ff::cocoa") << "CoCoA var sym for " << node << std::endl;
-        CoCoA::symbol sym = freshSym(node.getName());
+        Trace("ff::singular") << "Singular var sym for " << node << std::endl;
+        std::string sym = freshSym(node.getName());
         Assert(!d_varSyms.count(node));
-        Assert(!d_symNodes.count(extractStr(sym)));
+        Assert(!d_symNodes.count(sym));
         d_varSyms.insert({node, sym});
-        d_symNodes.insert({extractStr(sym), node});
+        d_symNodes.insert({sym, node});
       }
       else if (node.getKind() == Kind::NOT && isFfFact(node, size()))
       {
-        Trace("ff::cocoa") << "CoCoA != sym for " << node << std::endl;
-        CoCoA::symbol sym = freshSym("diseq", d_diseqSyms.size());
+        Trace("ff::singular") << "Singular != sym for " << node << std::endl;
+        std::string sym = freshSym("diseq", d_diseqSyms.size());
         d_diseqSyms.insert({node, sym});
       }
       else if (node.getKind() == Kind::FINITE_FIELD_BITSUM)
       {
-        Trace("ff::cocoa") << "CoCoA bitsum sym for " << node << std::endl;
-        CoCoA::symbol sym = freshSym("bitsum", d_bitsumSyms.size());
+        Trace("ff::singular") << "Singular bitsum sym for " << node << std::endl;
+        std::string sym = freshSym("bitsum", d_bitsumSyms.size());
         d_bitsumSyms.insert({node, sym});
-        d_symNodes.insert({extractStr(sym), node});
+        d_symNodes.insert({sym, node});
       }
     }
   }
@@ -170,7 +165,7 @@ void CocoaEncoder::addFact(const Node& fact)
   }
 }
 
-std::vector<Node> CocoaEncoder::bitsums() const
+std::vector<Node> SingularEncoder::bitsums() const
 {
   std::vector<Node> bs;
   for (const auto& [b, _] : d_bitsumSyms)
@@ -180,18 +175,18 @@ std::vector<Node> CocoaEncoder::bitsums() const
   return bs;
 }
 
-const Node& CocoaEncoder::symNode(CoCoA::symbol s) const
+const Node& SingularEncoder::symNode(const std::string& s) const
 {
-  Assert(d_symNodes.count(extractStr(s)));
-  return d_symNodes.at(extractStr(s));
+  Assert(d_symNodes.count(s));
+  return d_symNodes.at(s);
 }
 
-bool CocoaEncoder::hasNode(CoCoA::symbol s) const
+bool SingularEncoder::hasNode(const std::string& s) const
 {
-  return d_symNodes.count(extractStr(s));
+  return d_symNodes.count(s);
 }
 
-std::vector<std::pair<size_t, Node>> CocoaEncoder::nodeIndets() const
+std::vector<std::pair<size_t, Node>> SingularEncoder::nodeIndets() const
 {
   std::vector<std::pair<size_t, Node>> out;
   for (size_t i = 0, end = d_syms.size(); i < end; ++i)
@@ -209,30 +204,23 @@ std::vector<std::pair<size_t, Node>> CocoaEncoder::nodeIndets() const
   return out;
 }
 
-FiniteFieldValue CocoaEncoder::cocoaFfToFfVal(const Scalar& elem) const
+const Node& SingularEncoder::polyFact(const Poly& poly) const
 {
-  Assert(d_coeffRing.has_value());
-  Assert(CoCoA::owner(elem) == d_coeffRing);
-  return ff::cocoaFfToFfVal(elem, size());
+  return d_polyFacts.at(poly.str());
 }
 
-const Node& CocoaEncoder::polyFact(const Poly& poly) const
+bool SingularEncoder::polyHasFact(const Poly& poly) const
 {
-  return d_polyFacts.at(extractStr(poly));
+  return d_polyFacts.count(poly.str());
 }
 
-bool CocoaEncoder::polyHasFact(const Poly& poly) const
+const Poly& SingularEncoder::symPoly(const std::string& s) const
 {
-  return d_polyFacts.count(extractStr(poly));
+  Assert(d_symPolys.count(s));
+  return d_symPolys.at(s);
 }
 
-const Poly& CocoaEncoder::symPoly(CoCoA::symbol s) const
-{
-  Assert(d_symPolys.count(extractStr(s)));
-  return d_symPolys.at(extractStr(s));
-}
-
-void CocoaEncoder::encodeTerm(const Node& t)
+void SingularEncoder::encodeTerm(const Node& t)
 {
   Assert(d_stage == Stage::Encode);
 
@@ -246,7 +234,7 @@ void CocoaEncoder::encodeTerm(const Node& t)
     Poly elem;
     if (isFfFact(node, size()) || isFfTerm(node, size()))
     {
-      Trace("ff::cocoa::enc") << "Encode " << node;
+      Trace("ff::singular::enc") << "Encode " << node;
       // ff leaf
       if (isFfLeaf(node, size()) && !node.isConst())
       {
@@ -255,7 +243,7 @@ void CocoaEncoder::encodeTerm(const Node& t)
       // ff.add
       else if (node.getKind() == Kind::FINITE_FIELD_ADD)
       {
-        elem = CoCoA::zero(*d_polyRing);
+        elem = Poly::zero(*d_ring);
         for (const auto& c : node)
         {
           elem += d_cache[c];
@@ -264,7 +252,7 @@ void CocoaEncoder::encodeTerm(const Node& t)
       // ff.mul
       else if (node.getKind() == Kind::FINITE_FIELD_MULT)
       {
-        elem = CoCoA::one(*d_polyRing);
+        elem = Poly::one(*d_ring);
         for (const auto& c : node)
         {
           elem *= d_cache[c];
@@ -273,9 +261,9 @@ void CocoaEncoder::encodeTerm(const Node& t)
       // ff.bitsum
       else if (node.getKind() == Kind::FINITE_FIELD_BITSUM)
       {
-        Poly sum = CoCoA::zero(*d_polyRing);
-        Poly two = CoCoA::one(*d_polyRing) * 2;
-        Poly twoPow = CoCoA::one(*d_polyRing);
+        Poly sum = Poly::zero(*d_ring);
+        Poly two = Poly::constant(*d_ring, Integer(2));
+        Poly twoPow = Poly::one(*d_ring);
         for (const auto& c : node)
         {
           sum += twoPow * d_cache[c];
@@ -287,8 +275,8 @@ void CocoaEncoder::encodeTerm(const Node& t)
       // ff constant
       else if (node.getKind() == Kind::CONST_FINITE_FIELD)
       {
-        elem = CoCoA::one(*d_polyRing)
-               * intToCocoa(node.getConst<FiniteFieldValue>().getValue());
+        elem = Poly::constant(*d_ring,
+                              node.getConst<FiniteFieldValue>().getValue());
       }
       // !!
       else
@@ -301,7 +289,7 @@ void CocoaEncoder::encodeTerm(const Node& t)
   }
 }
 
-void CocoaEncoder::encodeFact(const Node& f)
+void SingularEncoder::encodeFact(const Node& f)
 {
   Assert(d_stage == Stage::Encode);
   Assert(isFfFact(f, size()));
@@ -319,20 +307,19 @@ void CocoaEncoder::encodeFact(const Node& f)
     encodeTerm(f[0][0]);
     encodeTerm(f[0][1]);
     Poly diff = d_cache.at(f[0][0]) - d_cache.at(f[0][1]);
-    p = diff * symPoly(d_diseqSyms.at(f)) - 1;
+    p = diff * symPoly(d_diseqSyms.at(f)) - Poly::one(*d_ring);
   }
-  if (!CoCoA::IsZero(p))
+  if (!p.isZero())
   {
-    // normalize; if we don't do it, CoCoA will in GB input, confusing our
-    // tracer.
-    p = p / CoCoA::LC(p);
+    // normalize
+    p = p.monic();
   }
   d_cache.insert({f, p});
-  d_polyFacts.insert({extractStr(p), f});
+  d_polyFacts.insert({p.str(), f});
 }
 
 }  // namespace ff
 }  // namespace theory
 }  // namespace cvc5::internal
 
-#endif /* CVC5_USE_COCOA */
+#endif /* CVC5_USE_SINGULAR */

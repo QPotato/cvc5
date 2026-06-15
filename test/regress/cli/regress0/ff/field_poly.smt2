@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: unsat
 ; COMMAND-LINE: --ff-field-polys
 ; COMMAND-LINE:

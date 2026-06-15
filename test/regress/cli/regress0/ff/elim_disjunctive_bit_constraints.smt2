@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: sat
 ; ffElimDisjunctiveBit should only fire when both branches of an OR constrain
 ; the same variable. Here (= x 0) and (= y 1) involve different variables,

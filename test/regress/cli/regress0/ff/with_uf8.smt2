@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: unsat
 ; COMMAND-LINE: --simplification=none
 (set-info :smt-lib-version 2.6)

@@ -9,19 +9,17 @@
  *
  */
 
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
 
 #include "theory/ff/gb.h"
 
-// external includes
-#include <CoCoA/ideal.H>
-#include <CoCoA/ring.H>
-#include <CoCoA/symbol.H>
-
 // internal includes
 #include "options/ff_options.h"
-#include "theory/ff/cocoa_encoder.h"
+#include "smt/env.h"
 #include "theory/ff/multi_roots.h"
+#include "theory/ff/singular_encoder.h"
+#include "theory/ff/singular_util.h"
+#include "util/resource_manager.h"
 
 namespace cvc5::internal {
 namespace theory {
@@ -32,7 +30,7 @@ FfResult gb(const std::vector<Node>& facts,
             const Env& env,
             FfStatistics* stats)
 {
-  CocoaEncoder enc(env.getNodeManager(), size);
+  SingularEncoder enc(env.getNodeManager(), size);
   // collect leaves
   for (const Node& node : facts)
   {
@@ -46,70 +44,47 @@ FfResult gb(const std::vector<Node>& facts,
   }
 
   // compute a GB
-  std::vector<CoCoA::RingElem> generators;
+  Polys generators;
   generators.insert(generators.end(), enc.polys().begin(), enc.polys().end());
   generators.insert(
       generators.end(), enc.bitsumPolys().begin(), enc.bitsumPolys().end());
   if (env.getOptions().ff.ffFieldPolys)
   {
-    CoCoA::PolyRing polyRing(enc.polyRing());
-    for (const auto& var : CoCoA::indets(polyRing))
+    // x^p - x; field polys are only used on small fields, where the exponent
+    // fits in an unsigned long.
+    Assert(enc.ring().isSmall());
+    unsigned long p = enc.ring().prime().getUnsignedLong();
+    for (size_t i = 0, n = enc.ring().nVars(); i < n; ++i)
     {
-      CoCoA::BigInt characteristic = CoCoA::characteristic(enc.coeffRing());
-      const long power = CoCoA::LogCardinality(enc.coeffRing());
-      CoCoA::BigInt s = CoCoA::power(characteristic, power);
-      generators.push_back(CoCoA::power(var, s) - var);
+      Poly var = Poly::indet(enc.ring(), i);
+      generators.push_back(var.power(p) - var);
     }
   }
-  Tracer tracer(generators);
+  Ideal ideal(enc.ring(), generators);
   if (stats) ++stats->d_numGbRuns;
-  if (env.getOptions().ff.ffTraceGb) tracer.setFunctionPointers();
-  const CoCoA::ideal ideal = CoCoA::ideal(generators);
-  std::vector<Poly> basis;
+  if (env.getResourceManager()->outOfTime())
+  {
+    throw FfTimeoutException("GBasis");
+  }
   {
     CodeTimer timer(stats ? &stats->d_timeGbRuns : nullptr);
-    basis = GBasisTimeout(ideal, env.getResourceManager());
+    ideal.gbasis();
   }
-  if (env.getOptions().ff.ffTraceGb) tracer.unsetFunctionPointers();
 
   // if it is trivial, create a conflict
-  bool is_trivial = basis.size() == 1 && CoCoA::deg(basis.front()) == 0;
-  if (is_trivial)
+  if (ideal.isWholeRing())
   {
     Trace("ff::gb") << "Trivial GB" << std::endl;
     if (stats) ++stats->d_numTrivialUnsat;
-    if (env.getOptions().ff.ffTraceGb)
-    {
-      std::vector<size_t> coreIndices = tracer.trace(basis.front());
-      FfCore conflict;
-      for (size_t i = 0, n = facts.size(); i < n; ++i)
-      {
-        Trace("ff::core") << "In " << i << " : " << facts[i] << std::endl;
-      }
-      for (size_t i : coreIndices)
-      {
-        // omit (field polys, bitsum polys, ...) from core
-        if (enc.polyHasFact(generators[i]))
-        {
-          Trace("ff::core") << "Core: " << i << " : " << facts[i] << std::endl;
-          conflict.push_back(enc.polyFact(generators[i]));
-        }
-      }
-      return conflict;
-    }
-    else
-    {
-      // set trivial conflict
-      return facts;
-    }
+    // coarse conflict core
+    return facts;
   }
   else
   {
     Trace("ff::gb") << "Non-trivial GB" << std::endl;
 
-    // common root (vec of CoCoA base ring elements)
-
-    std::vector<CoCoA::RingElem> root;
+    // common root (vec of base ring elements)
+    Point root;
     {
       CodeTimer timer(stats ? &stats->d_modelConstructionTime : nullptr);
       root = findZero(ideal, env, stats);
@@ -127,7 +102,7 @@ FfResult gb(const std::vector<Node>& facts,
       {
         if (isFfLeaf(node))
         {
-          model.emplace(node, enc.cocoaFfToFfVal(root[idx]));
+          model.emplace(node, toFfVal(root[idx], size));
         }
       }
       return model;

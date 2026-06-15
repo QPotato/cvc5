@@ -350,8 +350,7 @@ bool ProcessAssertions::apply(AssertionPipeline& ap)
   {
     applyPass("ff-disjunctive-bit", ap);
   }
-  if (options().ff.ffBitsum
-      || options().ff.ffSolver == options::FfSolver::SPLIT_GB)
+  if (options().ff.ffBitsum)
   {
     applyPass("ff-bitsum", ap);
   }

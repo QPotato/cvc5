@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: sat
 ; Tests the ff rewriter
 ; COMMAND-LINE: --decision=justification

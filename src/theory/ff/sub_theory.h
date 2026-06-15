@@ -16,12 +16,10 @@
 
 #include "cvc5_private.h"
 
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
 
 #ifndef CVC5__THEORY__FF__SUB_THEORY_H
 #define CVC5__THEORY__FF__SUB_THEORY_H
-
-#include <CoCoA/RingFp.H>
 
 #include <string>
 #include <unordered_map>
@@ -126,4 +124,4 @@ class SubTheory : protected EnvObj, public FieldObj
 
 #endif /* CVC5__THEORY__FF__SUB_THEORY_H */
 
-#endif /* CVC5_USE_COCOA */
+#endif /* CVC5_USE_SINGULAR */

@@ -8,68 +8,22 @@
  * ****************************************************************************
  *
  * Black box testing of groebner basis core computation.
+ *
+ * The single test case that used to live here (DistinctRootsPoly) did not
+ * actually test root finding: it exercised the CoCoA-based UNSAT-core
+ * dependency tracer (theory/ff/core.h's `ff::Tracer`), which hooked into
+ * CoCoA's Groebner-basis reduction callbacks.
+ *
+ * The Singular wrapper exposes no equivalent of that callback-based tracer
+ * (libSingular does not provide the reduction hooks CoCoA did), so this
+ * functionality has been removed. The test case is therefore dropped rather
+ * than ported. See the report accompanying the CoCoA->Singular migration.
  */
 
-#ifdef CVC5_USE_COCOA
-#include <CoCoA/BigInt.H>
-#include <CoCoA/QuotientRing.H>
-#include <CoCoA/RingZZ.H>
-#include <CoCoA/SparsePolyOps-ideal.H>
-#include <CoCoA/SparsePolyRing.H>
-#include <CoCoA/ring.H>
-#include <CoCoA/symbol.H>
+#include "cvc5_private.h"
 
-#include <memory>
-#include <utility>
+#ifdef CVC5_USE_SINGULAR
 
-#include "test_smt.h"
-#include "theory/ff/core.h"
-#include "util/cocoa_globals.h"
+// No test cases: the only test here exercised the removed CoCoA Tracer/core.
 
-namespace cvc5::internal {
-
-using namespace context;
-using namespace theory;
-
-namespace test {
-
-class TestTheoryFfRootsBlack : public TestSmt
-{
-  void SetUp() override
-  {
-    TestSmt::SetUp();
-    initCocoaGlobalManager();
-  }
-};
-
-#define TINY_MODULUS "7"
-
-TEST_F(TestTheoryFfRootsBlack, DistinctRootsPoly)
-{
-  {
-    CoCoA::BigInt p = CoCoA::BigIntFromString(TINY_MODULUS);
-    CoCoA::ring ring = CoCoA::NewZZmod(p);
-    std::vector<CoCoA::symbol> syms = CoCoA::symbols("x,y,z");
-    CoCoA::PolyRing polyRing = CoCoA::NewPolyRing(ring, syms);
-    CoCoA::RingElem x = CoCoA::indet(polyRing, 0);
-    CoCoA::RingElem y = CoCoA::indet(polyRing, 1);
-    CoCoA::RingElem z = CoCoA::indet(polyRing, 2);
-    std::vector<CoCoA::RingElem> gens{
-        x, x - y, y - z, z * z - z, y - 1, x - x * x};
-    ff::Tracer tracer(gens);
-    tracer.setFunctionPointers();
-    CoCoA::ideal ideal(gens);
-    std::vector<CoCoA::RingElem> basis = CoCoA::GBasis(ideal);
-    ASSERT_EQ(basis.size(), 1);
-    std::vector<size_t> idxs = tracer.trace(basis[0]);
-    ASSERT_EQ(idxs.size(), 4);
-    ASSERT_EQ(idxs[0], 0);
-    ASSERT_EQ(idxs[1], 1);
-    ASSERT_EQ(idxs[2], 2);
-    ASSERT_EQ(idxs[3], 4);
-  }
-}
-
-}  // namespace test
-}  // namespace cvc5::internal
-#endif  // CVC5_USE_COCOA
+#endif  // CVC5_USE_SINGULAR

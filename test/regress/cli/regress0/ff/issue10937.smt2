@@ -1,7 +1,6 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: unsat
 ; COMMAND-LINE: --ff-solver gb
-; COMMAND-LINE: --ff-solver split
 
 ; original:
 ; ### start

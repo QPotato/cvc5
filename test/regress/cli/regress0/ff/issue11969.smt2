@@ -1,7 +1,6 @@
 ; This file is from Merlin Sun
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: sat
-; COMMAND-LINE: --ff-solver split
 ; COMMAND-LINE: --ff-solver gb
 (set-logic QF_FF)
 (set-info :smt-lib-version 2.6)

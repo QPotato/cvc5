@@ -742,20 +742,16 @@ libcvc5_add_sources(
   theory/evaluator.h
   theory/ext_theory.cpp
   theory/ext_theory.h
-  theory/ff/cocoa_encoder.cpp
-  theory/ff/cocoa_encoder.h
-  theory/ff/cocoa_util.cpp
-  theory/ff/cocoa_util.h
-  theory/ff/core.cpp
-  theory/ff/core.h
   theory/ff/gb.cpp
   theory/ff/gb.h
   theory/ff/multi_roots.cpp
   theory/ff/multi_roots.h
   theory/ff/parse.cpp
   theory/ff/parse.h
-  theory/ff/split_gb.cpp
-  theory/ff/split_gb.h
+  theory/ff/singular_encoder.cpp
+  theory/ff/singular_encoder.h
+  theory/ff/singular_util.cpp
+  theory/ff/singular_util.h
   theory/ff/stats.cpp
   theory/ff/stats.h
   theory/ff/sub_theory.cpp
@@ -766,8 +762,6 @@ libcvc5_add_sources(
   theory/ff/theory_ff_rewriter.h
   theory/ff/theory_ff_type_rules.cpp
   theory/ff/theory_ff_type_rules.h
-  theory/ff/uni_roots.cpp
-  theory/ff/uni_roots.h
   theory/ff/util.cpp
   theory/ff/util.h
   theory/fp/fp_word_blaster.cpp
@@ -1591,6 +1585,11 @@ if(USE_COCOA)
   add_dependencies(cvc5-obj CoCoA)
   target_include_directories(cvc5-obj SYSTEM PRIVATE ${CoCoA_INCLUDE_DIR})
   target_link_libraries(cvc5 PRIVATE $<BUILD_INTERFACE:CoCoA> $<INSTALL_INTERFACE:cocoa>)
+endif()
+if(USE_SINGULAR)
+  target_include_directories(cvc5-obj SYSTEM PRIVATE ${Singular_INCLUDE_DIR})
+  target_compile_definitions(cvc5-obj PRIVATE ${Singular_COMPILE_DEFINITIONS})
+  target_link_libraries(cvc5 PRIVATE Singular)
 endif()
 
 add_dependencies(cvc5-obj SymFPU)

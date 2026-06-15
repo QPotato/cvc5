@@ -12,8 +12,8 @@
  * There is a subtheory for each prime p that handles the field Fp. Essentially
  * the common theory just multiplexes the sub-theories.
  *
- * NB: while most of FF does not build without CoCoA, this class does. So, it
- * has many ifdef blocks that throw errors without CoCoA.
+ * NB: while most of FF does not build without Singular, this class does. So, it
+ * has many ifdef blocks that throw errors without Singular.
  */
 
 #include "theory/ff/theory_ff.h"
@@ -40,11 +40,11 @@ namespace cvc5::internal {
 namespace theory {
 namespace ff {
 
-void noCoCoA()
+void noSingular()
 {
   throw LogicException(
       "cvc5 can't solve field problems since it was not configured with "
-      "--cocoa");
+      "--singular");
 }
 
 TheoryFiniteFields::TheoryFiniteFields(Env& env,
@@ -93,7 +93,7 @@ void TheoryFiniteFields::finishInit()
 
 void TheoryFiniteFields::postCheck(CVC5_UNUSED Effort level)
 {
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
   Trace("ff::check") << "ff::check : " << level << " @ level "
                      << context()->getLevel() << std::endl;
   NodeManager* nm = nodeManager();
@@ -112,9 +112,9 @@ void TheoryFiniteFields::postCheck(CVC5_UNUSED Effort level)
       d_im.conflict(conflict, InferenceId::FF_LEMMA);
     }
   }
-#else  /* CVC5_USE_COCOA */
+#else  /* CVC5_USE_SINGULAR */
   // We've received no facts (or we'd have crashed on notifyFact), so do nothing
-#endif /* CVC5_USE_COCOA */
+#endif /* CVC5_USE_SINGULAR */
 }
 
 void TheoryFiniteFields::notifyFact(CVC5_UNUSED TNode atom,
@@ -122,19 +122,19 @@ void TheoryFiniteFields::notifyFact(CVC5_UNUSED TNode atom,
                                     CVC5_UNUSED TNode fact,
                                     CVC5_UNUSED bool isInternal)
 {
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
   Trace("ff::check") << "ff::notifyFact : " << fact << " @ level "
                      << context()->getLevel() << std::endl;
   d_subTheories.at(atom[0].getType()).notifyFact(fact);
-#else  /* CVC5_USE_COCOA */
-  noCoCoA();
-#endif /* CVC5_USE_COCOA */
+#else  /* CVC5_USE_SINGULAR */
+  noSingular();
+#endif /* CVC5_USE_SINGULAR */
 }
 
 bool TheoryFiniteFields::collectModelValues(
     CVC5_UNUSED TheoryModel* m, CVC5_UNUSED const std::set<Node>& termSet)
 {
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
   Trace("ff::model") << "Term set: " << termSet << std::endl;
   for (const auto& subTheory : d_subTheories)
   {
@@ -149,9 +149,9 @@ bool TheoryFiniteFields::collectModelValues(
       }
     }
   }
-#else  /* CVC5_USE_COCOA */
+#else  /* CVC5_USE_SINGULAR */
   // We've received no facts (or we'd have crashed on notifyFact), so do nothing
-#endif /* CVC5_USE_COCOA */
+#endif /* CVC5_USE_SINGULAR */
   return true;
 }
 
@@ -171,7 +171,7 @@ void TheoryFiniteFields::preRegisterWithEe(TNode node)
 void TheoryFiniteFields::preRegisterTerm(TNode node)
 {
   preRegisterWithEe(node);
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
   Trace("ff::register") << "ff::preRegisterTerm : " << node << std::endl;
   TypeNode ty = node.getType();
   TypeNode fieldTy = ty;
@@ -190,9 +190,9 @@ void TheoryFiniteFields::preRegisterTerm(TNode node)
   {
     d_subTheories.try_emplace(fieldTy, d_env, d_stats.get(), ty.getFfSize());
   }
-#else  /* CVC5_USE_COCOA */
-  noCoCoA();
-#endif /* CVC5_USE_COCOA */
+#else  /* CVC5_USE_SINGULAR */
+  noSingular();
+#endif /* CVC5_USE_SINGULAR */
 }
 
 TrustNode TheoryFiniteFields::explain(TNode n)

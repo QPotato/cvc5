@@ -27,6 +27,8 @@ libcvc5_add_sources(
   cardinality_class.h
   cocoa_globals.cpp
   cocoa_globals.h
+  singular_globals.cpp
+  singular_globals.h
   dense_map.h
   didyoumean.cpp
   didyoumean.h

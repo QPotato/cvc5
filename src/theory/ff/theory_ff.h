@@ -12,8 +12,8 @@
  * There is a subtheory for each prime p that handles the field Fp. Essentially
  * the common theory just multiplexes the sub-theories.
  *
- * NB: while most of FF does not build without CoCoA, this class does. So, it
- * has many ifdef blocks that throw errors without CoCoA.
+ * NB: while most of FF does not build without Singular, this class does. So, it
+ * has many ifdef blocks that throw errors without Singular.
  */
 
 #include "cvc5_private.h"
@@ -95,12 +95,12 @@ class TheoryFiniteFields : public Theory
   /** Manages notifications from our equality engine */
   TheoryEqNotifyClass d_eqNotify;
 
-#ifdef CVC5_USE_COCOA
+#ifdef CVC5_USE_SINGULAR
   /**
    * Map from field types to sub-theories.
    */
   std::unordered_map<TypeNode, SubTheory> d_subTheories;
-#endif /* CVC5_USE_COCOA */
+#endif /* CVC5_USE_SINGULAR */
 
   std::unique_ptr<FfStatistics> d_stats;
 }; /* class TheoryFiniteFields */

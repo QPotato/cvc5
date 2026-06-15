@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: sat
 ; COMMAND-LINE: --no-debug-check-models
 ; XOR compilation strategy (unsound because even though the XOR sum can not

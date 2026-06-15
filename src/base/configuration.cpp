@@ -143,7 +143,8 @@ std::string Configuration::copyright()
   }
 
   if (Configuration::isBuiltWithCln() || Configuration::isBuiltWithGlpk()
-      || Configuration::isBuiltWithCoCoA())
+      || Configuration::isBuiltWithCoCoA()
+      || Configuration::isBuiltWithSingular())
   {
     ss << "This version of cvc5 is linked against the following third party\n"
        << "libraries covered by the GPLv3 license.\n"
@@ -166,6 +167,12 @@ std::string Configuration::copyright()
          << "  See https://cocoa.dima.unige.it/cocoa/cocoalib/index.shtml for "
             "copyright"
          << " information\n\n";
+    }
+    if (Configuration::isBuiltWithSingular())
+    {
+      ss << "  Singular - a computer algebra system for polynomial "
+            "computations\n"
+         << "  See https://www.singular.uni-kl.de/ for copyright information\n";
     }
   }
 
@@ -208,6 +215,7 @@ bool Configuration::isBuiltWithEditline() { return IS_EDITLINE_BUILD; }
 
 bool Configuration::isBuiltWithPoly() { return IS_POLY_BUILD; }
 bool Configuration::isBuiltWithCoCoA() { return IS_COCOA_BUILD; }
+bool Configuration::isBuiltWithSingular() { return IS_SINGULAR_BUILD; }
 
 bool Configuration::isBuiltWithPortfolio() { return IS_PORTFOLIO_BUILD; }
 

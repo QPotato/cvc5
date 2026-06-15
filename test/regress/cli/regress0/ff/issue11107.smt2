@@ -1,4 +1,4 @@
-; REQUIRES: cocoa
+; REQUIRES: singular
 ; EXPECT: sat
 (set-logic QF_FF)
 (set-option :incremental true)
